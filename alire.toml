@@ -1,0 +1,9 @@
+name = "quiza"
+description = "Shiny new project"
+version = "0.1.0-dev"
+
+authors = ["Nikolay Burkov"]
+maintainers = ["Nikolay Burkov <nbrk@linklevel.net>"]
+maintainers-logins = ["nbrk"]
+[[depends-on]]
+asfml = "^2.5.3"

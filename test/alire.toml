@@ -1,0 +1,13 @@
+name = "test"
+description = "Shiny new project"
+version = "0.1.0-dev"
+
+authors = ["Nikolay Burkov"]
+maintainers = ["Nikolay Burkov <nbrk@linklevel.net>"]
+maintainers-logins = ["nbrk"]
+
+executables = ["test"]
+[[depends-on]]
+quiza = "~0.1.0-dev"
+[[pins]]
+quiza = { path='..' }
