@@ -33,6 +33,8 @@ package Quiza.Screen is
       Key_Pause, Key_Count, Key_Any, Mouse_Button_Left, Mouse_Button_Middle,
       Mouse_Button_Right);
 
+   type Offscreen_Buffer_Type is private;
+
    --
    --  Screen
    --
@@ -60,8 +62,18 @@ package Quiza.Screen is
      (W : Screen_Type; X, Y, Radius : Float;
       R, G, B, A, Line_R, Line_G, Line_B, Line_A : Integer);
    procedure Clear (W : Screen_Type);
-   procedure Begin_Draw (W : Screen_Type);
+   procedure Begin_Draw (W : in out Screen_Type);
    procedure End_Draw (W : in out Screen_Type);
+
+   --
+   --  Offscreen drawing
+   --
+   procedure Begin_Draw_To_Offscreen_Buffer
+     (W : in out Screen_Type; Width, Height : Positive);
+   function Download_Offscreen_Buffer (W : in out Screen_Type) return Offscreen_Buffer_Type;
+   procedure Destroy_Offscreen_Buffer (O : in out Offscreen_Buffer_Type);
+   procedure Draw_Offscreen_Buffer
+     (W : Screen_Type; X, Y : Float; O : Offscreen_Buffer_Type);
 
    --
    --  Immediate (eventless) input processing
@@ -147,6 +159,7 @@ private
       Fonts     : String_Font_Maps.Map;
       Sprite    : Sf.Graphics.SfSprite_Ptr;
       Textures  : String_Texture_Maps.Map;
+      Offscreen : Sf.Graphics.SfRenderTexture_Ptr;
 
       --
       --  Transformation construction data
@@ -154,6 +167,15 @@ private
       Scale_SX, Scale_SY, Scale_CX, Scale_CY   : Float;
       Rotation_Angle, Rotation_CX, Rotation_CY : Float;
       Translation_DX, Translation_DY           : Float;
+
+      --
+      --  Other state
+      --
+      Offscreen_Mode : Boolean;
+   end record;
+
+   type Offscreen_Buffer_Type is record
+      Tex : Sf.Graphics.SfRenderTexture_Ptr;
    end record;
 
 end Quiza.Screen;

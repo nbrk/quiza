@@ -21,6 +21,7 @@ with Sf.Graphics.PrimitiveType;  use Sf.Graphics.PrimitiveType;
 with Sf.System.Vector2;          use Sf.System.Vector2;
 with Sf.Graphics.Transform;      use Sf.Graphics.Transform;
 with Sf.Graphics.RenderStates;   use Sf.Graphics.RenderStates;
+with Sf.Graphics.RenderTexture;  use Sf.Graphics.RenderTexture;
 with Sf.Graphics.Text;           use Sf.Graphics.Text;
 with Sf.Graphics.Font;           use Sf.Graphics.Font;
 with Sf.Graphics.Texture;        use Sf.Graphics.Texture;
@@ -32,21 +33,6 @@ with Ada.Directories;       use Ada.Directories;
 with Ada.Text_IO;           use Ada.Text_IO;
 
 package body Quiza.Screen is
-
-   --  package Caches is
-   --  end Caches;
-
-   --  package body Caches is
-   --  begin
-   --     Clock := create;
-   --     Rectangle := create;
-   --     setOutlineThickness (Rectangle, 1.0);
-   --     Circle := create;
-   --     setOutlineThickness (Circle, 1.0);
-   --     Line := create;
-   --     resize (Line, 2);
-   --     setPrimitiveType (Line, sfLines);
-   --  end Caches;
 
    ---------------------------------------
    -- Recompute_Render_States_Transform --
@@ -73,13 +59,16 @@ package body Quiza.Screen is
      (Width, Height : Positive; Full_Screen : Boolean) return Screen_Type
    is
       W : Screen_Type;
+      --  Style : SfWindowStyle := sfDefaultStyle
    begin
       W.Impl :=
         create
           (VideoMode.sfVideoMode'
              (sfUint32 (Width), sfUint32 (Height),
               sfUint32 (Get_Desktop_Bits_Per_Pixel)),
-           "Quiza", sfDefaultStyle or sfFullscreen);
+           "Quiza",
+           sfDefaultStyle or (if Full_Screen then sfFullscreen else 0));
+      W.Offscreen_Mode := False;
 
       W.Scale_SX       := 1.0;
       W.Scale_SY       := 1.0;
@@ -157,19 +146,47 @@ package body Quiza.Screen is
 
    procedure Clear (W : Screen_Type) is
    begin
-      clear (W.Impl);
+      if W.Offscreen_Mode then
+         clear (W.Offscreen, sfColor'(0, 0, 0, 255));
+      else
+         clear (W.Impl);
+      end if;
    end Clear;
 
    ----------------
    -- Begin_Draw --
    ----------------
 
-   procedure Begin_Draw (W : Screen_Type) is
+   procedure Begin_Draw (W : in out Screen_Type) is
       T : sfTime;
       pragma Unreferenced (T);
    begin
-      T := restart (W.Clock);
+      W.Offscreen_Mode := False;
+      T                := restart (W.Clock);
    end Begin_Draw;
+
+   ------------------------------------
+   -- Begin_Draw_To_Offscreen_Buffer --
+   ------------------------------------
+
+   procedure Begin_Draw_To_Offscreen_Buffer
+     (W : in out Screen_Type; Width, Height : Positive)
+   is
+      T : sfTime;
+      pragma Unreferenced (T);
+   begin
+      if W.Offscreen /= null then
+         raise Program_Error with "Previous offscreen not taken";
+         --  Destroy (W.Offscreen);
+      end if;
+
+      W.Offscreen :=
+        Sf.Graphics.RenderTexture.create
+          (sfUint32 (Width), sfUint32 (Height), sfFalse);
+
+      W.Offscreen_Mode := True;
+      T                := restart (W.Clock);
+   end Begin_Draw_To_Offscreen_Buffer;
 
    --------------
    -- End_Draw --
@@ -177,9 +194,58 @@ package body Quiza.Screen is
 
    procedure End_Draw (W : in out Screen_Type) is
    begin
-      display (W.Impl);
+      if W.Offscreen_Mode then
+         display (W.Offscreen);
+      else
+         display (W.Impl);
+      end if;
       W.Time := getElapsedTime (W.Clock);
    end End_Draw;
+
+   -------------------------------
+   -- Download_Offscreen_Buffer --
+   -------------------------------
+
+   function Download_Offscreen_Buffer (W : in out Screen_Type) return Offscreen_Buffer_Type is
+      Offscreen : Offscreen_Buffer_Type := (Tex => W.Offscreen);
+   begin
+      --  NOTE: caller takes ownership of the render texture
+      W.Offscreen := null;
+      return Offscreen;
+   end Download_Offscreen_Buffer;
+
+   ------------------------------
+   -- Destroy_Offscreen_Buffer --
+   ------------------------------
+
+   procedure Destroy_Offscreen_Buffer (O : in out Offscreen_Buffer_Type) is
+   begin
+      if O.Tex = null then
+         raise Program_Error with "Double destroy of Offscreen";
+      end if;
+      destroy (O.Tex);
+      O.Tex := null;
+   end Destroy_Offscreen_Buffer;
+
+   ---------------------------
+   -- Draw_Offscreen_Buffer --
+   ---------------------------
+
+   procedure Draw_Offscreen_Buffer (W : Screen_Type; X, Y : Float; O : Offscreen_Buffer_Type)
+   is
+   begin
+      if O.Tex = null then
+         raise Program_Error with "Attempt to draw null Offscreen";
+      end if;
+      setTexture (W.Sprite, getTexture (O.Tex), sfTrue);
+      setPosition (W.Sprite, sfVector2f'(X, Y));
+      setScale (W.Sprite, sfVector2f'(1.0, 1.0));
+      if W.Offscreen_Mode then
+         drawSprite (W.Offscreen, W.Sprite, W.States);
+      else
+         drawSprite (W.Impl, W.Sprite, W.States);
+      end if;
+   end Draw_Offscreen_Buffer;
 
    ---------------------
    -- Is_Mouse_Inside --
@@ -770,7 +836,12 @@ package body Quiza.Screen is
                sfColor'(sfUint8 (R), sfUint8 (G), sfUint8 (B), sfUint8 (A)));
             setPosition (W.Sprite, sfVector2f'(X, Y));
             setScale (W.Sprite, sfVector2f'(1.0, 1.0));
-            drawSprite (W.Impl, W.Sprite, W.States);
+            --  DrawSprite (W.Impl, W.Sprite, W.States);
+            if W.Offscreen_Mode then
+               drawSprite (W.Offscreen, W.Sprite, W.States);
+            else
+               drawSprite (W.Impl, W.Sprite, W.States);
+            end if;
             null;
          end;
       end if;
@@ -807,7 +878,12 @@ package body Quiza.Screen is
             begin
                setScale (W.Sprite, sfVector2f'(SX, SY));
             end;
-            drawSprite (W.Impl, W.Sprite, W.States);
+            --  DrawSprite (W.Impl, W.Sprite, W.States);
+            if W.Offscreen_Mode then
+               drawSprite (W.Offscreen, W.Sprite, W.States);
+            else
+               drawSprite (W.Impl, W.Sprite, W.States);
+            end if;
             null;
          end;
       end if;
@@ -839,8 +915,12 @@ package body Quiza.Screen is
             setColor
               (W.Sprite,
                sfColor'(sfUint8 (R), sfUint8 (G), sfUint8 (B), sfUint8 (A)));
-            drawSprite (W.Impl, W.Sprite, W.States);
-            null;
+            --  DrawSprite (W.Impl, W.Sprite, W.States);
+            if W.Offscreen_Mode then
+               drawSprite (W.Offscreen, W.Sprite, W.States);
+            else
+               drawSprite (W.Impl, W.Sprite, W.States);
+            end if;
          end;
       end if;
    end Draw_Sub_Image;
@@ -863,7 +943,12 @@ package body Quiza.Screen is
       V1.position.y := Y1;
       V0.color := sfColor'(sfUint8 (R), sfUint8 (G), sfUint8 (B), sfUint8 (A));
       V1.color := sfColor'(sfUint8 (R), sfUint8 (G), sfUint8 (B), sfUint8 (A));
-      drawVertexArray (W.Impl, W.Line, W.States);
+      --  DrawVertexArray (W.Impl, W.Line, W.States);
+      if W.Offscreen_Mode then
+         drawVertexArray (W.Offscreen, W.Line, W.States);
+      else
+         drawVertexArray (W.Impl, W.Line, W.States);
+      end if;
    end Draw_Line;
 
    --------------------
@@ -888,6 +973,7 @@ package body Quiza.Screen is
    begin
       setPosition (W.Rectangle, sfVector2f'(X, Y));
       setSize (W.Rectangle, sfVector2f'(Width, Height));
+      setOutlineThickness (W.Rectangle, -1.0);
       setOutlineColor
         (W.Rectangle,
          sfColor'
@@ -896,7 +982,13 @@ package body Quiza.Screen is
       setFillColor
         (W.Rectangle,
          sfColor'(sfUint8 (R), sfUint8 (G), sfUint8 (B), sfUint8 (A)));
-      drawRectangleShape (W.Impl, W.Rectangle, W.States);
+      --  DrawRectangleShape (W.Impl, W.Rectangle, W.States);
+
+      if W.Offscreen_Mode then
+         drawRectangleShape (W.Offscreen, W.Rectangle, W.States);
+      else
+         drawRectangleShape (W.Impl, W.Rectangle, W.States);
+      end if;
    end Draw_Rectangle;
 
    -----------------
@@ -929,7 +1021,14 @@ package body Quiza.Screen is
       setFillColor
         (W.Circle,
          sfColor'(sfUint8 (R), sfUint8 (G), sfUint8 (B), sfUint8 (A)));
-      drawCircleShape (W.Impl, W.Circle, W.States);
+
+      --  DrawCircleShape (W.Impl, W.Circle, W.States);
+      if W.Offscreen_Mode then
+         drawCircleShape (W.Offscreen, W.Circle, W.States);
+      else
+         drawCircleShape (W.Impl, W.Circle, W.States);
+      end if;
+
    end Draw_Circle;
 
 end Quiza.Screen;
