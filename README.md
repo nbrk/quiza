@@ -1,8 +1,19 @@
-# Quiza
+# Brief
 *Quiza* stands for "Quick visualization in Ada". It is a small package on top of `ASFML` (the SFML bindings for Ada)
 that greatly abstracts and simplifies some common routines like drawing to screen, checking for inputs, loading images, setting transforms, etc. 
-With this package you can get something on the screen in no time. The intended use case is quick and dirty visualizations, with "quick" being
+
+**With this package you can get something on the screen in just no time!**
+
+The intended use case is quick and dirty visualizations, with "quick" being
 primarily *quick to code in Ada*, but the performance should be acceptable for these small tasks as well.
+
+# Design notes
+- the API is centered around type `Quiza.Screen.Screen_Type` and its primitive subprograms
+- when loading external resources with `Load_Images_Directory`, etc. the program tries to load **all files** (e.g. `*.*`) in the directory, so populate the dir with the relevant content only
+- there are no events, only real-time queries
+- execution time from `Begin_Draw` to `End_Draw` is measured and reported via `Get_Draw_Time`
+- all SFML "objects" are cached and reused under the hood
+
 
 # Example
 ``` ada
@@ -74,4 +85,9 @@ begin
 
       delay (0.016_6) - Duration (S.Get_Draw_Time);
    end loop;
+   
+   Quiza.Shutdown;
+
+end Test;
+
 ```
