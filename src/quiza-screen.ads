@@ -107,15 +107,15 @@ package Quiza.Screen is
    --  Textures, sprite drawing
    --
    procedure Load_Images_Directory (W : in out Screen_Type; Dir : String);
-   procedure Draw_Image (W : Screen_Type; X, Y : Float; Img_Name : String);
    procedure Draw_Image
-     (W : Screen_Type; X, Y : Float; Img_Name : String; R, G, B, A : Integer);
+     (W          : Screen_Type; X, Y : Float; Img_Name : String;
+      R, G, B, A : Integer := 255);
+   procedure Draw_Resized_Image
+     (W          : Screen_Type; X, Y, Width, Height : Float; Img_Name : String;
+      R, G, B, A : Integer := 255);
    procedure Draw_Sub_Image
      (W : Screen_Type; X, Y : Float; Img_Name : String;
-      Rect_X, Rect_Y, Rect_W, Rect_H : Float);
-   procedure Draw_Sub_Image
-     (W : Screen_Type; X, Y : Float; Img_Name : String;
-      Rect_X, Rect_Y, Rect_W, Rect_H : Float; R, G, B, A : Integer);
+      Rect_X, Rect_Y, Rect_W, Rect_H : Float; R, G, B, A : Integer := 255);
 
 private
 

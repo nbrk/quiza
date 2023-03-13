@@ -56,7 +56,7 @@ begin
             S.Mouse_X'Image & ", " & S.Mouse_Y'Image, 255, 255, 255, 255,
             "Roboto-Bold.ttf", 20);
 
-         S.Draw_Image (300.0, 100.0, "nick.jpg");
+         S.Draw_Resized_Image (300.0, 100.0, 100.0, 100.0, "nick.jpg");
 
          if S.Is_Key_Or_Button_Pressed (Mouse_Button_Right) then
             S.Draw_Line
