@@ -39,6 +39,7 @@ package Quiza.Screen is
    type Screen_Type is tagged private;
    function Make_Screen
      (Width, Height : Positive; Full_Screen : Boolean) return Screen_Type;
+   function Make_Screen return Screen_Type;
    function Get_Width (W : Screen_Type) return Positive;
    function Get_Height (W : Screen_Type) return Positive;
    function Is_Open (W : Screen_Type) return Boolean;
@@ -119,15 +120,15 @@ package Quiza.Screen is
 
 private
 
-   use type Sf.Graphics.sfFont_Ptr;
+   use type Sf.Graphics.SfFont_Ptr;
    package String_Font_Maps is new Ada.Containers.Hashed_Maps
-     (Ada.Strings.Unbounded.Unbounded_String, Sf.Graphics.sfFont_Ptr,
+     (Ada.Strings.Unbounded.Unbounded_String, Sf.Graphics.SfFont_Ptr,
       Hash            => Ada.Strings.Unbounded.Hash,
       Equivalent_Keys => Ada.Strings.Unbounded."=");
 
-   use type Sf.Graphics.sfTexture_Ptr;
+   use type Sf.Graphics.SfTexture_Ptr;
    package String_Texture_Maps is new Ada.Containers.Hashed_Maps
-     (Ada.Strings.Unbounded.Unbounded_String, Sf.Graphics.sfTexture_Ptr,
+     (Ada.Strings.Unbounded.Unbounded_String, Sf.Graphics.SfTexture_Ptr,
       Hash            => Ada.Strings.Unbounded.Hash,
       Equivalent_Keys => Ada.Strings.Unbounded."=");
 
@@ -135,16 +136,16 @@ private
       --
       --  SFML objects for reuse
       --
-      Impl      : Sf.Graphics.sfRenderWindow_Ptr;
-      Rectangle : Sf.Graphics.sfRectangleShape_Ptr;
-      Circle    : Sf.Graphics.sfCircleShape_Ptr;
-      Line      : Sf.Graphics.sfVertexArray_Ptr;
-      Clock     : Sf.System.sfClock_Ptr;
-      Time      : Sf.System.Time.sfTime;
-      States    : Sf.Graphics.RenderStates.sfRenderStates_Ptr;
-      Text      : Sf.Graphics.sfText_Ptr;
+      Impl      : Sf.Graphics.SfRenderWindow_Ptr;
+      Rectangle : Sf.Graphics.SfRectangleShape_Ptr;
+      Circle    : Sf.Graphics.SfCircleShape_Ptr;
+      Line      : Sf.Graphics.SfVertexArray_Ptr;
+      Clock     : Sf.System.SfClock_Ptr;
+      Time      : Sf.System.Time.SfTime;
+      States    : Sf.Graphics.RenderStates.SfRenderStates_Ptr;
+      Text      : Sf.Graphics.SfText_Ptr;
       Fonts     : String_Font_Maps.Map;
-      Sprite    : Sf.Graphics.sfSprite_Ptr;
+      Sprite    : Sf.Graphics.SfSprite_Ptr;
       Textures  : String_Texture_Maps.Map;
 
       --
