@@ -38,17 +38,18 @@ package body Quiza.Screen is
    -- Recompute_Render_States_Transform --
    ---------------------------------------
 
-   procedure Recompute_Render_States_Transform (W : Screen_Type) is
+   procedure Recompute_Render_States_Transform (W : in out Screen_Type) is
    begin
-      W.States.transform := Identity;
-      translate
-        (W.States.transform'Access, W.Translation_DX, W.Translation_DY);
-      rotateWithCenter
-        (W.States.transform'Access, W.Rotation_Angle, W.Rotation_CX,
+      W.States.Transform := Identity;
+      Translate
+        (W.States.Transform'Access, W.Translation_DX, W.Translation_DY);
+      RotateWithCenter
+        (W.States.Transform'Access, W.Rotation_Angle, W.Rotation_CX,
          W.Rotation_CY);
-      scaleWithCenter
-        (W.States.transform'Access, W.Scale_SX, W.Scale_SY, W.Scale_CX,
+      ScaleWithCenter
+        (W.States.Transform'Access, W.Scale_SX, W.Scale_SY, W.Scale_CX,
          W.Scale_CY);
+      W.States_Inverse_Trans := GetInverse (W.States.Transform'Access);
    end Recompute_Render_States_Transform;
 
    -----------------
@@ -62,12 +63,12 @@ package body Quiza.Screen is
       --  Style : SfWindowStyle := sfDefaultStyle
    begin
       W.Impl :=
-        create
-          (VideoMode.sfVideoMode'
-             (sfUint32 (Width), sfUint32 (Height),
-              sfUint32 (Get_Desktop_Bits_Per_Pixel)),
+        Create
+          (VideoMode.SfVideoMode'
+             (SfUint32 (Width), SfUint32 (Height),
+              SfUint32 (Get_Desktop_Bits_Per_Pixel)),
            "Quiza",
-           sfDefaultStyle or (if Full_Screen then sfFullscreen else 0));
+           SfDefaultStyle or (if Full_Screen then SfFullscreen else 0));
       W.Offscreen_Mode := False;
 
       W.Scale_SX       := 1.0;
@@ -80,26 +81,27 @@ package body Quiza.Screen is
       W.Translation_DX := 0.0;
       W.Translation_DY := 0.0;
 
-      W.Clock            := create;
-      W.States           := new sfRenderStates;
-      W.States.blendMode := sfBlendAlpha;
-      W.States.transform := Identity;
-      W.States.texture   := null;
-      W.States.shader    := null;
-      W.Text             := create;
-      W.Sprite           := create;
+      W.Clock            := Create;
+      W.States           := new SfRenderStates;
+      W.States.BlendMode := SfBlendAlpha;
+      W.States.Transform := Identity;
+      W.States.Texture   := null;
+      W.States.Shader    := null;
+      W.States_Inverse_Trans := Identity;
+      W.Text             := Create;
+      W.Sprite           := Create;
 
       W.Recompute_Render_States_Transform;
 
-      W.Rectangle := create;
-      setOutlineThickness (W.Rectangle, 1.0);
+      W.Rectangle := Create;
+      SetOutlineThickness (W.Rectangle, 1.0);
 
-      W.Circle := create;
-      setOutlineThickness (W.Circle, 1.0);
+      W.Circle := Create;
+      SetOutlineThickness (W.Circle, 1.0);
 
-      W.Line := create;
-      resize (W.Line, 2);
-      setPrimitiveType (W.Line, sfLines);
+      W.Line := Create;
+      Resize (W.Line, 2);
+      SetPrimitiveType (W.Line, SfLines);
 
       return W;
    end Make_Screen;
@@ -119,7 +121,7 @@ package body Quiza.Screen is
 
    function Get_Width (W : Screen_Type) return Positive is
    begin
-      return Positive (getSize (W.Impl).x);
+      return Positive (GetSize (W.Impl).X);
    end Get_Width;
 
    ----------------
@@ -128,7 +130,7 @@ package body Quiza.Screen is
 
    function Get_Height (W : Screen_Type) return Positive is
    begin
-      return Positive (getSize (W.Impl).y);
+      return Positive (GetSize (W.Impl).Y);
    end Get_Height;
 
    -------------
@@ -137,7 +139,7 @@ package body Quiza.Screen is
 
    function Is_Open (W : Screen_Type) return Boolean is
    begin
-      return Boolean (isOpen (W.Impl));
+      return Boolean (IsOpen (W.Impl));
    end Is_Open;
 
    -----------
@@ -147,9 +149,9 @@ package body Quiza.Screen is
    procedure Clear (W : Screen_Type) is
    begin
       if W.Offscreen_Mode then
-         clear (W.Offscreen, sfColor'(0, 0, 0, 255));
+         Clear (W.Offscreen, SfColor'(0, 0, 0, 255));
       else
-         clear (W.Impl);
+         Clear (W.Impl);
       end if;
    end Clear;
 
@@ -158,11 +160,11 @@ package body Quiza.Screen is
    ----------------
 
    procedure Begin_Draw (W : in out Screen_Type) is
-      T : sfTime;
+      T : SfTime;
       pragma Unreferenced (T);
    begin
       W.Offscreen_Mode := False;
-      T                := restart (W.Clock);
+      T                := Restart (W.Clock);
    end Begin_Draw;
 
    ------------------------------------
@@ -172,7 +174,7 @@ package body Quiza.Screen is
    procedure Begin_Draw_To_Offscreen_Buffer
      (W : in out Screen_Type; Width, Height : Positive)
    is
-      T : sfTime;
+      T : SfTime;
       pragma Unreferenced (T);
    begin
       if W.Offscreen /= null then
@@ -181,11 +183,11 @@ package body Quiza.Screen is
       end if;
 
       W.Offscreen :=
-        Sf.Graphics.RenderTexture.create
-          (sfUint32 (Width), sfUint32 (Height), sfFalse);
+        Sf.Graphics.RenderTexture.Create
+          (SfUint32 (Width), SfUint32 (Height), SfFalse);
 
       W.Offscreen_Mode := True;
-      T                := restart (W.Clock);
+      T                := Restart (W.Clock);
    end Begin_Draw_To_Offscreen_Buffer;
 
    --------------
@@ -195,18 +197,20 @@ package body Quiza.Screen is
    procedure End_Draw (W : in out Screen_Type) is
    begin
       if W.Offscreen_Mode then
-         display (W.Offscreen);
+         Display (W.Offscreen);
       else
-         display (W.Impl);
+         Display (W.Impl);
       end if;
-      W.Time := getElapsedTime (W.Clock);
+      W.Time := GetElapsedTime (W.Clock);
    end End_Draw;
 
    -------------------------------
    -- Download_Offscreen_Buffer --
    -------------------------------
 
-   function Download_Offscreen_Buffer (W : in out Screen_Type) return Offscreen_Buffer_Type is
+   function Download_Offscreen_Buffer
+     (W : in out Screen_Type) return Offscreen_Buffer_Type
+   is
       Offscreen : Offscreen_Buffer_Type := (Tex => W.Offscreen);
    begin
       --  NOTE: caller takes ownership of the render texture
@@ -223,7 +227,7 @@ package body Quiza.Screen is
       if O.Tex = null then
          raise Program_Error with "Double destroy of Offscreen";
       end if;
-      destroy (O.Tex);
+      Destroy (O.Tex);
       O.Tex := null;
    end Destroy_Offscreen_Buffer;
 
@@ -231,19 +235,20 @@ package body Quiza.Screen is
    -- Draw_Offscreen_Buffer --
    ---------------------------
 
-   procedure Draw_Offscreen_Buffer (W : Screen_Type; X, Y : Float; O : Offscreen_Buffer_Type)
+   procedure Draw_Offscreen_Buffer
+     (W : Screen_Type; X, Y : Float; O : Offscreen_Buffer_Type)
    is
    begin
       if O.Tex = null then
          raise Program_Error with "Attempt to draw null Offscreen";
       end if;
-      setTexture (W.Sprite, getTexture (O.Tex), sfTrue);
-      setPosition (W.Sprite, sfVector2f'(X, Y));
-      setScale (W.Sprite, sfVector2f'(1.0, 1.0));
+      SetTexture (W.Sprite, GetTexture (O.Tex), SfTrue);
+      SetPosition (W.Sprite, SfVector2f'(X, Y));
+      SetScale (W.Sprite, SfVector2f'(1.0, 1.0));
       if W.Offscreen_Mode then
-         drawSprite (W.Offscreen, W.Sprite, W.States);
+         DrawSprite (W.Offscreen, W.Sprite, W.States);
       else
-         drawSprite (W.Impl, W.Sprite, W.States);
+         DrawSprite (W.Impl, W.Sprite, W.States);
       end if;
    end Draw_Offscreen_Buffer;
 
@@ -269,214 +274,214 @@ package body Quiza.Screen is
       -- To_Sf_Keycode --
       -------------------
 
-      function To_Sf_Keycode (K : Keycode_Type) return sfKeyCode is
-         C : sfKeyCode := sfKeyUnknown;
+      function To_Sf_Keycode (K : Keycode_Type) return SfKeyCode is
+         C : SfKeyCode := SfKeyUnknown;
       begin
          case K is
             when Key_A =>
-               C := sfKeyA;
+               C := SfKeyA;
             when Key_B =>
-               C := sfKeyB;
+               C := SfKeyB;
             when Key_C =>
-               C := sfKeyC;
+               C := SfKeyC;
             when Key_D =>
-               C := sfKeyD;
+               C := SfKeyD;
             when Key_E =>
-               C := sfKeyE;
+               C := SfKeyE;
             when Key_F =>
-               C := sfKeyF;
+               C := SfKeyF;
             when Key_G =>
-               C := sfKeyG;
+               C := SfKeyG;
             when Key_H =>
-               C := sfKeyH;
+               C := SfKeyH;
             when Key_I =>
-               C := sfKeyI;
+               C := SfKeyI;
             when Key_J =>
-               C := sfKeyJ;
+               C := SfKeyJ;
             when Key_K =>
-               C := sfKeyK;
+               C := SfKeyK;
             when Key_L =>
-               C := sfKeyL;
+               C := SfKeyL;
             when Key_M =>
-               C := sfKeyM;
+               C := SfKeyM;
             when Key_N =>
-               C := sfKeyN;
+               C := SfKeyN;
             when Key_O =>
-               C := sfKeyO;
+               C := SfKeyO;
             when Key_P =>
-               C := sfKeyP;
+               C := SfKeyP;
             when Key_Q =>
-               C := sfKeyQ;
+               C := SfKeyQ;
             when Key_R =>
-               C := sfKeyR;
+               C := SfKeyR;
             when Key_S =>
-               C := sfKeyS;
+               C := SfKeyS;
             when Key_T =>
-               C := sfKeyT;
+               C := SfKeyT;
             when Key_U =>
-               C := sfKeyU;
+               C := SfKeyU;
             when Key_V =>
-               C := sfKeyV;
+               C := SfKeyV;
             when Key_W =>
-               C := sfKeyW;
+               C := SfKeyW;
             when Key_X =>
-               C := sfKeyX;
+               C := SfKeyX;
             when Key_Y =>
-               C := sfKeyY;
+               C := SfKeyY;
             when Key_Z =>
-               C := sfKeyZ;
+               C := SfKeyZ;
             when Key_Num_0 =>
-               C := sfKeyNum0;
+               C := SfKeyNum0;
             when Key_Num_1 =>
-               C := sfKeyNum1;
+               C := SfKeyNum1;
             when Key_Num_2 =>
-               C := sfKeyNum2;
+               C := SfKeyNum2;
             when Key_Num_3 =>
-               C := sfKeyNum3;
+               C := SfKeyNum3;
             when Key_Num_4 =>
-               C := sfKeyNum4;
+               C := SfKeyNum4;
             when Key_Num_5 =>
-               C := sfKeyNum5;
+               C := SfKeyNum5;
             when Key_Num_6 =>
-               C := sfKeyNum6;
+               C := SfKeyNum6;
             when Key_Num_7 =>
-               C := sfKeyNum7;
+               C := SfKeyNum7;
             when Key_Num_8 =>
-               C := sfKeyNum8;
+               C := SfKeyNum8;
             when Key_Num_9 =>
-               C := sfKeyNum9;
+               C := SfKeyNum9;
             when Key_Escape =>
-               C := sfKeyEscape;
+               C := SfKeyEscape;
             when Key_L_Control =>
-               C := sfKeyLControl;
+               C := SfKeyLControl;
             when Key_L_Shift =>
-               C := sfKeyLShift;
+               C := SfKeyLShift;
             when Key_L_Alt =>
-               C := sfKeyLAlt;
+               C := SfKeyLAlt;
             when Key_L_System =>
-               C := sfKeyLSystem;
+               C := SfKeyLSystem;
             when Key_R_Control =>
-               C := sfKeyRControl;
+               C := SfKeyRControl;
             when Key_R_Shift =>
-               C := sfKeyRShift;
+               C := SfKeyRShift;
             when Key_R_Alt =>
-               C := sfKeyRAlt;
+               C := SfKeyRAlt;
             when Key_R_System =>
-               C := sfKeyRSystem;
+               C := SfKeyRSystem;
             when Key_Menu =>
-               C := sfKeyMenu;
+               C := SfKeyMenu;
             when Key_L_Bracket =>
-               C := sfKeyLBracket;
+               C := SfKeyLBracket;
             when Key_R_Bracket =>
-               C := sfKeyRBracket;
+               C := SfKeyRBracket;
             when Key_Semicolon =>
-               C := sfKeySemicolon;
+               C := SfKeySemicolon;
             when Key_Comma =>
-               C := sfKeyComma;
+               C := SfKeyComma;
             when Key_Period =>
-               C := sfKeyPeriod;
+               C := SfKeyPeriod;
             when Key_Quote =>
-               C := sfKeyQuote;
+               C := SfKeyQuote;
             when Key_Slash =>
-               C := sfKeySlash;
+               C := SfKeySlash;
             when Key_Backslash =>
-               C := sfKeyBackslash;
+               C := SfKeyBackslash;
             when Key_Tilde =>
-               C := sfKeyTilde;
+               C := SfKeyTilde;
             when Key_Equal =>
-               C := sfKeyEqual;
+               C := SfKeyEqual;
             when Key_Hyphen =>
-               C := sfKeyHyphen;
+               C := SfKeyHyphen;
             when Key_Space =>
-               C := sfKeySpace;
+               C := SfKeySpace;
             when Key_Enter =>
-               C := sfKeyEnter;
+               C := SfKeyEnter;
             when Key_Back =>
-               C := sfKeyBack;
+               C := SfKeyBack;
             when Key_Tab =>
-               C := sfKeyTab;
+               C := SfKeyTab;
             when Key_Page_Up =>
-               C := sfKeyPageUp;
+               C := SfKeyPageUp;
             when Key_Page_Down =>
-               C := sfKeyPageDown;
+               C := SfKeyPageDown;
             when Key_End =>
-               C := sfKeyEnd;
+               C := SfKeyEnd;
             when Key_Home =>
-               C := sfKeyHome;
+               C := SfKeyHome;
             when Key_Insert =>
-               C := sfKeyInsert;
+               C := SfKeyInsert;
             when Key_Delete =>
-               C := sfKeyDelete;
+               C := SfKeyDelete;
             when Key_Add =>
-               C := sfKeyAdd;
+               C := SfKeyAdd;
             when Key_Subtract =>
-               C := sfKeySubtract;
+               C := SfKeySubtract;
             when Key_Multiply =>
-               C := sfKeyMultiply;
+               C := SfKeyMultiply;
             when Key_Divide =>
-               C := sfKeyDivide;
+               C := SfKeyDivide;
             when Key_Left =>
-               C := sfKeyLeft;
+               C := SfKeyLeft;
             when Key_Right =>
-               C := sfKeyRight;
+               C := SfKeyRight;
             when Key_Up =>
-               C := sfKeyUp;
+               C := SfKeyUp;
             when Key_Down =>
-               C := sfKeyDown;
+               C := SfKeyDown;
             when Key_Numpad_0 =>
-               C := sfKeyNum0;
+               C := SfKeyNum0;
             when Key_Numpad_1 =>
-               C := sfKeyNum1;
+               C := SfKeyNum1;
             when Key_Numpad_2 =>
-               C := sfKeyNum2;
+               C := SfKeyNum2;
             when Key_Numpad_3 =>
-               C := sfKeyNum3;
+               C := SfKeyNum3;
             when Key_Numpad_4 =>
-               C := sfKeyNum4;
+               C := SfKeyNum4;
             when Key_Numpad_5 =>
-               C := sfKeyNum5;
+               C := SfKeyNum5;
             when Key_Numpad_6 =>
-               C := sfKeyNum6;
+               C := SfKeyNum6;
             when Key_Numpad_7 =>
-               C := sfKeyNum7;
+               C := SfKeyNum7;
             when Key_Numpad_8 =>
-               C := sfKeyNum8;
+               C := SfKeyNum8;
             when Key_Numpad_9 =>
-               C := sfKeyNum9;
+               C := SfKeyNum9;
             when Key_F1 =>
-               C := sfKeyF1;
+               C := SfKeyF1;
             when Key_F2 =>
-               C := sfKeyF2;
+               C := SfKeyF2;
             when Key_F3 =>
-               C := sfKeyF3;
+               C := SfKeyF3;
             when Key_F4 =>
-               C := sfKeyF4;
+               C := SfKeyF4;
             when Key_F5 =>
-               C := sfKeyF5;
+               C := SfKeyF5;
             when Key_F6 =>
-               C := sfKeyF6;
+               C := SfKeyF6;
             when Key_F7 =>
-               C := sfKeyF7;
+               C := SfKeyF7;
             when Key_F8 =>
-               C := sfKeyF8;
+               C := SfKeyF8;
             when Key_F9 =>
-               C := sfKeyF9;
+               C := SfKeyF9;
             when Key_F10 =>
-               C := sfKeyF10;
+               C := SfKeyF10;
             when Key_F11 =>
-               C := sfKeyF11;
+               C := SfKeyF11;
             when Key_F12 =>
-               C := sfKeyF12;
+               C := SfKeyF12;
             when Key_F13 =>
-               C := sfKeyF13;
+               C := SfKeyF13;
             when Key_F14 =>
-               C := sfKeyF14;
+               C := SfKeyF14;
             when Key_F15 =>
-               C := sfKeyF15;
+               C := SfKeyF15;
             when Key_Pause =>
-               C := sfKeyPause;
+               C := SfKeyPause;
             when Key_Count =>
-               C := sfKeyCount;
+               C := SfKeyCount;
             when others =>
                return raise Program_Error with "Bad conversion to sfKeyCode";
          end case;
@@ -487,19 +492,19 @@ package body Quiza.Screen is
       -- To_Sf_Mousebutton --
       -----------------------
 
-      function To_Sf_Mousebutton (K : Keycode_Type) return sfMouseButton is
-         B : sfMouseButton;
+      function To_Sf_Mousebutton (K : Keycode_Type) return SfMouseButton is
+         B : SfMouseButton;
       begin
          case K is
             when Mouse_Button_Left =>
-               B := sfMouseLeft;
+               B := SfMouseLeft;
             when Mouse_Button_Middle =>
-               B := sfMouseMiddle;
+               B := SfMouseMiddle;
             when Mouse_Button_Right =>
-               B := sfMouseRight;
+               B := SfMouseRight;
             when others =>
                return
-                 raise Program_Error with "Bad conversion to sfMouseButton";
+               raise Program_Error with "Bad conversion to sfMouseButton";
          end case;
          return B;
       end To_Sf_Mousebutton;
@@ -513,18 +518,18 @@ package body Quiza.Screen is
       Pressed : Boolean := False;
    begin
       if K in Keyboard_Key_Type then
-         Pressed := Boolean (isKeyPressed (To_Sf_Keycode (K)));
+         Pressed := Boolean (IsKeyPressed (To_Sf_Keycode (K)));
       elsif K in Mousebutton_Key_Type then
-         Pressed := Boolean (isButtonPressed (To_Sf_Mousebutton (K)));
+         Pressed := Boolean (IsButtonPressed (To_Sf_Mousebutton (K)));
       elsif K = Key_Any then
          --  Any key means any keyboard or any mouse button
          for I in Keyboard_Key_Type'Range loop
-            if Boolean (isKeyPressed (To_Sf_Keycode (I))) then
+            if Boolean (IsKeyPressed (To_Sf_Keycode (I))) then
                return True;
             end if;
          end loop;
          for I in Mousebutton_Key_Type loop
-            if Boolean (isButtonPressed (To_Sf_Mousebutton (I))) then
+            if Boolean (IsButtonPressed (To_Sf_Mousebutton (I))) then
                return True;
             end if;
          end loop;
@@ -539,7 +544,7 @@ package body Quiza.Screen is
 
    function Mouse_X (W : Screen_Type) return Integer is
    begin
-      return Integer (Sf.Graphics.RenderWindow.Mouse.getPosition (W.Impl).x);
+      return Integer (Sf.Graphics.RenderWindow.Mouse.GetPosition (W.Impl).X);
    end Mouse_X;
 
    -------------
@@ -548,7 +553,7 @@ package body Quiza.Screen is
 
    function Mouse_Y (W : Screen_Type) return Integer is
    begin
-      return Integer (Sf.Graphics.RenderWindow.Mouse.getPosition (W.Impl).y);
+      return Integer (Sf.Graphics.RenderWindow.Mouse.GetPosition (W.Impl).Y);
    end Mouse_Y;
 
    -------------------
@@ -557,7 +562,7 @@ package body Quiza.Screen is
 
    function Get_Draw_Time (W : Screen_Type) return Float is
    begin
-      return asSeconds (W.Time);
+      return AsSeconds (W.Time);
    end Get_Draw_Time;
 
    ----------------------
@@ -710,6 +715,45 @@ package body Quiza.Screen is
       return W.Translation_DY;
    end Get_Draw_Translation_DY;
 
+   -------------------
+   -- Untransform_X --
+   -------------------
+
+   procedure Untransform_XY
+     (W : Screen_Type; X, Y : Float; Out_X, Out_Y : out Float)
+   is
+      Untrans : aliased SfTransform := GetInverse (W.States.Transform'Access);
+      Xy      : SfVector2f          := SfVector2f'(X, Y);
+      Out_XY  : SfVector2f          := TransformPoint (Untrans'Access, Xy);
+   begin
+      Out_X := Out_XY.X;
+      Out_Y := Out_XY.Y;
+   end Untransform_XY;
+
+   ---------------------------
+   -- Untransformed_Mouse_X --
+   ---------------------------
+
+   function Untransformed_Mouse_X (W : Screen_Type) return Integer is
+      MX : Float := Float (W.Mouse_X);
+      MY : Float := Float (W.Mouse_Y);
+      Vec : SfVector2f := TransformPoint (W.States_Inverse_Trans'Access, SfVector2f'(Mx, My));
+   begin
+      return Integer (Vec.X);
+   end Untransformed_Mouse_X;
+
+   ---------------------------
+   -- Untransformed_Mouse_Y --
+   ---------------------------
+
+   function Untransformed_Mouse_Y (W : Screen_Type) return Integer is
+      MX : Float := Float (W.Mouse_X);
+      MY : Float := Float (W.Mouse_Y);
+      Vec : SfVector2f := TransformPoint (W.States_Inverse_Trans'Access, SfVector2f'(Mx, My));
+   begin
+      return Integer (Vec.Y);
+   end Untransformed_Mouse_Y;
+
    --------------------------
    -- Load_Fonts_Directory --
    --------------------------
@@ -724,8 +768,8 @@ package body Quiza.Screen is
          Get_Next_Entry (Dir_Search, Dir_Entry);
          if Kind (Dir_Entry) = Ordinary_File then
             declare
-               F : constant sfFont_Ptr :=
-                 createFromFile (Full_Name (Dir_Entry));
+               F : constant SfFont_Ptr :=
+                     CreateFromFile (Full_Name (Dir_Entry));
                Font_Name : constant String := (Simple_Name (Dir_Entry));
             begin
                if F /= null then
@@ -755,23 +799,23 @@ package body Quiza.Screen is
      (W : Screen_Type; X, Y : Float; Str : String; R, G, B, A : Integer;
       Font_Name : String; Size : Positive := 12)
    is
-   --  TODO: optimize lookups
+      --  TODO: optimize lookups
    begin
       if not W.Fonts.Contains (To_Unbounded_String (Font_Name)) then
          raise Program_Error with "Requested font is not loaded";
       else
          declare
-            F : constant sfFont_Ptr :=
-              W.Fonts.Element (To_Unbounded_String (Font_Name));
+            F : constant SfFont_Ptr :=
+                  W.Fonts.Element (To_Unbounded_String (Font_Name));
          begin
-            setFont (W.Text, F);
-            setString (W.Text, Str);
-            setCharacterSize (W.Text, sfUint32 (Size));
-            setFillColor
+            SetFont (W.Text, F);
+            SetString (W.Text, Str);
+            SetCharacterSize (W.Text, SfUint32 (Size));
+            SetFillColor
               (W.Text,
-               sfColor'(sfUint8 (R), sfUint8 (G), sfUint8 (B), sfUint8 (A)));
-            setPosition (W.Text, sfVector2f'(X, Y));
-            drawText (W.Impl, W.Text, W.States);
+               SfColor'(SfUint8 (R), SfUint8 (G), SfUint8 (B), SfUint8 (A)));
+            SetPosition (W.Text, SfVector2f'(X, Y));
+            DrawText (W.Impl, W.Text, W.States);
             null;
          end;
       end if;
@@ -792,8 +836,8 @@ package body Quiza.Screen is
          Get_Next_Entry (Dir_Search, Dir_Entry);
          if Kind (Dir_Entry) = Ordinary_File then
             declare
-               I : constant sfTexture_Ptr :=
-                 createFromFile (Full_Name (Dir_Entry));
+               I : constant SfTexture_Ptr :=
+                     CreateFromFile (Full_Name (Dir_Entry));
                Image_Name : constant String := (Simple_Name (Dir_Entry));
             begin
                if I /= null then
@@ -827,20 +871,20 @@ package body Quiza.Screen is
          raise Program_Error with "Requested image is not loaded: " & Img_Name;
       else
          declare
-            I : constant sfTexture_Ptr :=
-              W.Textures.Element (To_Unbounded_String (Img_Name));
+            I : constant SfTexture_Ptr :=
+                  W.Textures.Element (To_Unbounded_String (Img_Name));
          begin
-            setTexture (W.Sprite, I, sfTrue);
-            setColor
+            SetTexture (W.Sprite, I, SfTrue);
+            SetColor
               (W.Sprite,
-               sfColor'(sfUint8 (R), sfUint8 (G), sfUint8 (B), sfUint8 (A)));
-            setPosition (W.Sprite, sfVector2f'(X, Y));
-            setScale (W.Sprite, sfVector2f'(1.0, 1.0));
+               SfColor'(SfUint8 (R), SfUint8 (G), SfUint8 (B), SfUint8 (A)));
+            SetPosition (W.Sprite, SfVector2f'(X, Y));
+            SetScale (W.Sprite, SfVector2f'(1.0, 1.0));
             --  DrawSprite (W.Impl, W.Sprite, W.States);
             if W.Offscreen_Mode then
-               drawSprite (W.Offscreen, W.Sprite, W.States);
+               DrawSprite (W.Offscreen, W.Sprite, W.States);
             else
-               drawSprite (W.Impl, W.Sprite, W.States);
+               DrawSprite (W.Impl, W.Sprite, W.States);
             end if;
             null;
          end;
@@ -860,29 +904,29 @@ package body Quiza.Screen is
          raise Program_Error with "Requested image is not loaded: " & Img_Name;
       else
          declare
-            I : constant sfTexture_Ptr :=
-              W.Textures.Element (To_Unbounded_String (Img_Name));
+            I : constant SfTexture_Ptr :=
+                  W.Textures.Element (To_Unbounded_String (Img_Name));
          begin
-            setTexture (W.Sprite, I, sfTrue);
-            setColor
+            SetTexture (W.Sprite, I, SfTrue);
+            SetColor
               (W.Sprite,
-               sfColor'(sfUint8 (R), sfUint8 (G), sfUint8 (B), sfUint8 (A)));
-            setPosition (W.Sprite, sfVector2f'(X, Y));
+               SfColor'(SfUint8 (R), SfUint8 (G), SfUint8 (B), SfUint8 (A)));
+            SetPosition (W.Sprite, SfVector2f'(X, Y));
             declare
                Img_W : constant Float :=
-                 Float (Sf.Graphics.Texture.getSize (I).x);
+                         Float (Sf.Graphics.Texture.GetSize (I).X);
                Img_H : constant Float :=
-                 Float (Sf.Graphics.Texture.getSize (I).y);
+                         Float (Sf.Graphics.Texture.GetSize (I).Y);
                SX : constant Float := Width / Img_W;
                SY : constant Float := Height / Img_H;
             begin
-               setScale (W.Sprite, sfVector2f'(SX, SY));
+               SetScale (W.Sprite, SfVector2f'(SX, SY));
             end;
             --  DrawSprite (W.Impl, W.Sprite, W.States);
             if W.Offscreen_Mode then
-               drawSprite (W.Offscreen, W.Sprite, W.States);
+               DrawSprite (W.Offscreen, W.Sprite, W.States);
             else
-               drawSprite (W.Impl, W.Sprite, W.States);
+               DrawSprite (W.Impl, W.Sprite, W.States);
             end if;
             null;
          end;
@@ -902,24 +946,24 @@ package body Quiza.Screen is
          raise Program_Error with "Requested image is not loaded: " & Img_Name;
       else
          declare
-            I : constant sfTexture_Ptr :=
-              W.Textures.Element (To_Unbounded_String (Img_Name));
+            I : constant SfTexture_Ptr :=
+                  W.Textures.Element (To_Unbounded_String (Img_Name));
          begin
-            setTexture (W.Sprite, I);
-            setTextureRect
+            SetTexture (W.Sprite, I);
+            SetTextureRect
               (W.Sprite,
-               sfIntRect'
+               SfIntRect'
                  (Integer (Rect_X), Integer (Rect_Y), Integer (Rect_W),
                   Integer (Rect_H)));
-            setPosition (W.Sprite, sfVector2f'(X, Y));
-            setColor
+            SetPosition (W.Sprite, SfVector2f'(X, Y));
+            SetColor
               (W.Sprite,
-               sfColor'(sfUint8 (R), sfUint8 (G), sfUint8 (B), sfUint8 (A)));
+               SfColor'(SfUint8 (R), SfUint8 (G), SfUint8 (B), SfUint8 (A)));
             --  DrawSprite (W.Impl, W.Sprite, W.States);
             if W.Offscreen_Mode then
-               drawSprite (W.Offscreen, W.Sprite, W.States);
+               DrawSprite (W.Offscreen, W.Sprite, W.States);
             else
-               drawSprite (W.Impl, W.Sprite, W.States);
+               DrawSprite (W.Impl, W.Sprite, W.States);
             end if;
          end;
       end if;
@@ -932,22 +976,22 @@ package body Quiza.Screen is
    procedure Draw_Line
      (W : Screen_Type; X0, Y0, X1, Y1 : Float; R, G, B, A : Integer)
    is
-      V0 : constant access Sf.Graphics.Vertex.sfVertex :=
-        getVertex (W.Line, 0);
-      V1 : constant access Sf.Graphics.Vertex.sfVertex :=
-        getVertex (W.Line, 1);
+      V0 : constant access Sf.Graphics.Vertex.SfVertex :=
+             GetVertex (W.Line, 0);
+      V1 : constant access Sf.Graphics.Vertex.SfVertex :=
+             GetVertex (W.Line, 1);
    begin
-      V0.position.x := X0;
-      V0.position.y := Y0;
-      V1.position.x := X1;
-      V1.position.y := Y1;
-      V0.color := sfColor'(sfUint8 (R), sfUint8 (G), sfUint8 (B), sfUint8 (A));
-      V1.color := sfColor'(sfUint8 (R), sfUint8 (G), sfUint8 (B), sfUint8 (A));
+      V0.Position.X := X0;
+      V0.Position.Y := Y0;
+      V1.Position.X := X1;
+      V1.Position.Y := Y1;
+      V0.Color := SfColor'(SfUint8 (R), SfUint8 (G), SfUint8 (B), SfUint8 (A));
+      V1.Color := SfColor'(SfUint8 (R), SfUint8 (G), SfUint8 (B), SfUint8 (A));
       --  DrawVertexArray (W.Impl, W.Line, W.States);
       if W.Offscreen_Mode then
-         drawVertexArray (W.Offscreen, W.Line, W.States);
+         DrawVertexArray (W.Offscreen, W.Line, W.States);
       else
-         drawVertexArray (W.Impl, W.Line, W.States);
+         DrawVertexArray (W.Impl, W.Line, W.States);
       end if;
    end Draw_Line;
 
@@ -971,23 +1015,23 @@ package body Quiza.Screen is
       R, G, B, A, Line_R, Line_G, Line_B, Line_A : Integer)
    is
    begin
-      setPosition (W.Rectangle, sfVector2f'(X, Y));
-      setSize (W.Rectangle, sfVector2f'(Width, Height));
-      setOutlineThickness (W.Rectangle, -1.0);
-      setOutlineColor
+      SetPosition (W.Rectangle, SfVector2f'(X, Y));
+      SetSize (W.Rectangle, SfVector2f'(Width, Height));
+      SetOutlineThickness (W.Rectangle, -1.0);
+      SetOutlineColor
         (W.Rectangle,
-         sfColor'
-           (sfUint8 (Line_R), sfUint8 (Line_G), sfUint8 (Line_B),
-            sfUint8 (Line_A)));
-      setFillColor
+         SfColor'
+           (SfUint8 (Line_R), SfUint8 (Line_G), SfUint8 (Line_B),
+            SfUint8 (Line_A)));
+      SetFillColor
         (W.Rectangle,
-         sfColor'(sfUint8 (R), sfUint8 (G), sfUint8 (B), sfUint8 (A)));
+         SfColor'(SfUint8 (R), SfUint8 (G), SfUint8 (B), SfUint8 (A)));
       --  DrawRectangleShape (W.Impl, W.Rectangle, W.States);
 
       if W.Offscreen_Mode then
-         drawRectangleShape (W.Offscreen, W.Rectangle, W.States);
+         DrawRectangleShape (W.Offscreen, W.Rectangle, W.States);
       else
-         drawRectangleShape (W.Impl, W.Rectangle, W.States);
+         DrawRectangleShape (W.Impl, W.Rectangle, W.States);
       end if;
    end Draw_Rectangle;
 
@@ -1011,22 +1055,22 @@ package body Quiza.Screen is
       R, G, B, A, Line_R, Line_G, Line_B, Line_A : Integer)
    is
    begin
-      setRadius (W.Circle, Radius);
-      setPosition (W.Circle, sfVector2f'(X, Y));
-      setOutlineColor
+      SetRadius (W.Circle, Radius);
+      SetPosition (W.Circle, SfVector2f'(X, Y));
+      SetOutlineColor
         (W.Circle,
-         sfColor'
-           (sfUint8 (Line_R), sfUint8 (Line_G), sfUint8 (Line_B),
-            sfUint8 (Line_A)));
-      setFillColor
+         SfColor'
+           (SfUint8 (Line_R), SfUint8 (Line_G), SfUint8 (Line_B),
+            SfUint8 (Line_A)));
+      SetFillColor
         (W.Circle,
-         sfColor'(sfUint8 (R), sfUint8 (G), sfUint8 (B), sfUint8 (A)));
+         SfColor'(SfUint8 (R), SfUint8 (G), SfUint8 (B), SfUint8 (A)));
 
       --  DrawCircleShape (W.Impl, W.Circle, W.States);
       if W.Offscreen_Mode then
-         drawCircleShape (W.Offscreen, W.Circle, W.States);
+         DrawCircleShape (W.Offscreen, W.Circle, W.States);
       else
-         drawCircleShape (W.Impl, W.Circle, W.States);
+         DrawCircleShape (W.Impl, W.Circle, W.States);
       end if;
 
    end Draw_Circle;

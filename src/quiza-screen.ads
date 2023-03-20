@@ -2,6 +2,7 @@ with Sf.Graphics;
 with Sf.System;
 with Sf.System.Time;
 with Sf.Graphics.RenderStates;
+with Sf.Graphics.Transform;
 --  with Sf.Graphics.Font;
 --  with Sf.Graphics.Text;
 
@@ -70,7 +71,8 @@ package Quiza.Screen is
    --
    procedure Begin_Draw_To_Offscreen_Buffer
      (W : in out Screen_Type; Width, Height : Positive);
-   function Download_Offscreen_Buffer (W : in out Screen_Type) return Offscreen_Buffer_Type;
+   function Download_Offscreen_Buffer
+     (W : in out Screen_Type) return Offscreen_Buffer_Type;
    procedure Destroy_Offscreen_Buffer (O : in out Offscreen_Buffer_Type);
    procedure Draw_Offscreen_Buffer
      (W : Screen_Type; X, Y : Float; O : Offscreen_Buffer_Type);
@@ -107,6 +109,11 @@ package Quiza.Screen is
    function Get_Draw_Rotation_CY (W : Screen_Type) return Float;
    function Get_Draw_Translation_DX (W : Screen_Type) return Float;
    function Get_Draw_Translation_DY (W : Screen_Type) return Float;
+   procedure Untransform_XY
+     (W : Screen_Type; X, Y : Float; Out_X, Out_Y : out Float);
+   function Untransformed_Mouse_X (W : Screen_Type) return Integer;
+   function Untransformed_Mouse_Y (W : Screen_Type) return Integer;
+
 
    --
    --  Fonts, text drawing
@@ -155,6 +162,7 @@ private
       Clock     : Sf.System.SfClock_Ptr;
       Time      : Sf.System.Time.SfTime;
       States    : Sf.Graphics.RenderStates.SfRenderStates_Ptr;
+      States_Inverse_Trans : aliased Sf.Graphics.Transform.SfTransform;
       Text      : Sf.Graphics.SfText_Ptr;
       Fonts     : String_Font_Maps.Map;
       Sprite    : Sf.Graphics.SfSprite_Ptr;
